@@ -8,6 +8,9 @@ from scripts.iib.tool import (
     human_readable_size,
     is_img_created_by_comfyui,
     is_img_created_by_comfyui_with_webui_gen_info,
+    is_img_created_by_diffuzers,
+    get_params_from_diffuzers,
+    get_info_from_params,
     is_valid_image_path,
     temp_path,
     read_sd_webui_gen_info_from_image,
@@ -108,7 +111,7 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
         try:
             return get_valid_img_dirs(get_sd_webui_conf(**kwargs))
         except Exception as e:
-            print(e) 
+            print(e)
             return []
 
     def update_all_scanned_paths():
@@ -494,13 +497,17 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
                 if is_img_created_by_comfyui_with_webui_gen_info(img):
                     return read_sd_webui_gen_info_from_image(img, path)
                 else:
-                    try:                    
+                    try:
                         params = get_comfyui_exif_data(img)
                         return comfyui_exif_data_to_str(params)
                     except:
                         logger.error('parse comfyui image failed. prompt:')
                         logger.error(img.info.get('prompt'))
                         return ''
+            elif is_img_created_by_diffuzers(img):
+                params = get_params_from_diffuzers(img)
+                info = get_info_from_params(params)
+                return info
             else:
                 return read_sd_webui_gen_info_from_image(img, path)
 
@@ -666,7 +673,7 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
             if  DbImg.count(conn):
                 update_image_data([os.path.dirname(path)])
                 img = DbImg.get(conn, path)
-            else: 
+            else:
                 raise HTTPException(
                     400,
                     "你需要先通过图像搜索页生成索引"
@@ -725,9 +732,9 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
     async def search_by_substr(substr: str = '', cursor: str = '', size = 200, regexp: str = ''):
         conn = DataBase.get_conn()
         imgs, next_cursor = DbImg.find_by_substring(
-            conn=conn, 
-            substring=substr, 
-            cursor=cursor, 
+            conn=conn,
+            substring=substr,
+            cursor=cursor,
             limit=size,
             regexp=regexp
         )
@@ -773,11 +780,10 @@ def infinite_image_browsing_api(app: FastAPI, **kwargs):
         conn = DataBase.get_conn()
         ExtraPath.remove(conn, path, extra_path.type, img_search_dirs=get_img_search_dirs())
 
-    
+
     @app.post(
         f"{db_pre}/rebuild_index",
         dependencies=[Depends(verify_secret), Depends(write_permission_required)],
     )
     async def rebuild_index():
         rebuild_image_index(search_dirs=get_img_search_dirs())
-
