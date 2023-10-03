@@ -324,8 +324,9 @@ def get_params_from_diffuzers(img: Image):
     del json_text2img["prompt"]
     del json_text2img["negative_prompt"]
 
-    # param parsing looks for decimalxdecimal for size
-    json_text2img["Size"] = str(json_text2img["image_size"][0]) + "x" + str(json_text2img["image_size"][1])
+    # special size format
+    json_text2img["Size-1"] = json_text2img["image_size"][0]
+    json_text2img["Size-2"] = json_text2img["image_size"][1]
     del json_text2img["image_size"]
 
     return {
