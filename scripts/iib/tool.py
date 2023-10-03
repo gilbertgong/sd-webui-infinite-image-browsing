@@ -323,6 +323,11 @@ def get_params_from_diffuzers(img: Image):
     # remove them from the json to dedupe
     del json_text2img["prompt"]
     del json_text2img["negative_prompt"]
+
+    # param parsing looks for decimalxdecimal for size
+    json_text2img["Size"] = str(json_text2img["image_size"][0]) + "x" + str(json_text2img["image_size"][1])
+    del json_text2img["image_size"]
+
     return {
         "meta": json_text2img,
         "pos_prompt": pos_prompt_arr,
