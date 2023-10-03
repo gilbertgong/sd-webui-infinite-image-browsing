@@ -32,7 +32,7 @@ is_win = platform.system().lower().find("windows") != -1
 
 
 
-    
+
 try:
     from dotenv import load_dotenv
 
@@ -236,7 +236,7 @@ def get_secret_key_required():
     try:
         from modules.shared import cmd_opts
         return bool(cmd_opts.gradio_auth)
-    except:        
+    except:
         return False
 
 is_secret_key_required = get_secret_key_required()
@@ -309,6 +309,35 @@ def is_img_created_by_comfyui(img: Image):
 
 def is_img_created_by_comfyui_with_webui_gen_info(img: Image):
     return img.info.get('parameters')
+
+def is_img_created_by_diffuzers(img: Image):
+    return img.info.get('text2img')
+
+def get_params_from_diffuzers(img: Image):
+    text2img = img.info.get('text2img')
+    json_text2img = json.loads(text2img)
+    pos_prompt = json_text2img["prompt"]
+    neg_prompt = json_text2img["negative_prompt"]
+    pos_prompt_arr = unique_by(parse_prompt(pos_prompt)["pos_prompt"])
+    # now that we've copied the positive and negative prompts
+    # remove them from the json to dedupe
+    del json_text2img["prompt"]
+    del json_text2img["negative_prompt"]
+
+    # special size format
+    json_text2img["Size-1"] = json_text2img["image_size"][0]
+    json_text2img["Size-2"] = json_text2img["image_size"][1]
+    del json_text2img["image_size"]
+
+    return {
+        "meta": json_text2img,
+        "pos_prompt": pos_prompt_arr,
+        "pos_prompt_raw": pos_prompt,
+        "neg_prompt_raw" : neg_prompt
+    }
+
+def get_info_from_params(data):
+    return comfyui_exif_data_to_str(data)
 
 def get_comfyui_exif_data(img: Image):
     prompt = img.info.get('prompt')
@@ -519,5 +548,3 @@ def open_folder(folder_path, file_path=None):
             subprocess.run(["open", folder])
         elif os.name == "posix":
             subprocess.run(["xdg-open", folder])
-
-
